@@ -11,6 +11,15 @@ sintetizan en un panel de control en Looker Studio.
 
 ---
 
+## 🎥 Demostración — Dashboard en tiempo real
+
+https://github.com/EliasSancheM/Examen-Tranversal-Big-Data-Final/raw/main/demo_dashboard_tiempo_real.mp4
+
+> Si el reproductor no aparece arriba, puedes **[descargar o ver el video aquí](demo_dashboard_tiempo_real.mp4)**.
+> El video muestra el panel de Looker Studio actualizándose con los datos GPS que llegan por streaming.
+
+---
+
 ## Arquitectura (Lambda)
 
 ```
