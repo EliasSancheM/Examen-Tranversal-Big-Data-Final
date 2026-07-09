@@ -1,0 +1,24 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs y estado de ejecución
+*.log
+pipeline_gcp_*.log
+estado_ejecuciones*.json
+
+# Salidas generadas
+output/
+data_taxis/
+clima_ndjson.json
+clima_santiago_ndjson.json
+
+# Temporales del sistema
+.DS_Store
+Thumbs.db

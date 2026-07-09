@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Informe EP3 — RED Santiago Big Data Streaming</title>
+<style>
+  @page { size: A4; margin: 2cm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Calibri, sans-serif;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #1a1a1a;
+    margin: 0; padding: 0;
+  }
+  h1 { font-size: 19pt; color: #d6001c; margin: 0 0 4px; }
+  h2 { font-size: 14pt; color: #d6001c; border-bottom: 2px solid #d6001c;
+       padding-bottom: 3px; margin-top: 22px; }
+  h3 { font-size: 12pt; color: #333; margin-top: 16px; }
+  h4 { font-size: 11pt; color: #555; margin: 10px 0 4px; }
+  p { margin: 6px 0; text-align: justify; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 10pt; }
+  th, td { border: 1px solid #bbb; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #d6001c; color: #fff; }
+  tr:nth-child(even) td { background: #f7f7f7; }
+  code { font-family: Consolas, monospace; background: #eee; padding: 1px 4px;
+         border-radius: 3px; font-size: 9.5pt; }
+  pre { background: #1e1e1e; color: #e6e6e6; padding: 10px 12px; border-radius: 5px;
+        font-family: Consolas, monospace; font-size: 8.5pt; line-height: 1.35;
+        overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+  pre.light { background: #f4f4f4; color: #222; border: 1px solid #ddd; }
+  .pagebreak { page-break-before: always; }
+  .cover { text-align: center; padding-top: 60px; }
+  .cover .sub { font-size: 13pt; color: #444; margin-top: 6px; }
+  .cover .box { margin-top: 50px; font-size: 12pt; line-height: 1.9; }
+  .note { background: #fff4f4; border-left: 4px solid #d6001c; padding: 8px 12px;
+          margin: 10px 0; font-size: 10pt; }
+  .ph { background: #fffbe6; border: 1px dashed #c9a900; padding: 8px; font-size: 10pt;
+        color: #7a6500; }
+  .imgph { border: 2px dashed #999; background: #fafafa; text-align: center;
+           padding: 40px 10px; color: #888; font-size: 10pt; margin: 8px 0; }
+  ul { margin: 6px 0 6px 18px; padding: 0; }
+  li { margin: 3px 0; }
+  .small { font-size: 9.5pt; color: #666; }
+</style>
+</head>
+<body>
+
+<!-- ====================== PORTADA ====================== -->
+<div class="cover">
+  <h1>RED Santiago — Análisis de Congestión del Transporte Público en Tiempo Real</h1>
+  <div class="sub">Gestión de Grandes Volúmenes de Datos · Procesamiento Streaming en Google Cloud Platform</div>
+  <div class="sub small">Evaluación Parcial N°3 — AVY1101 Big Data</div>
+
+  <div class="box">
+    <strong>Sección:</strong> [COMPLETAR SECCIÓN]<br>
+    <strong>Integrante 1:</strong> [Nombre Apellido] — RUT [00.000.000-0]<br>
+    <strong>Integrante 2:</strong> [Nombre Apellido] — RUT [00.000.000-0]<br>
+    <strong>Roles simulados:</strong> Data Engineers<br>
+    <strong>Fecha:</strong> Junio 2026
+  </div>
+</div>
+
+<!-- ====================== ÍNDICE ====================== -->
+<div class="pagebreak"></div>
+<h2>Índice</h2>
+<ol>
+  <li>Introducción</li>
+  <li>Arquitectura general de la solución</li>
+  <li>Paso 1 — Conexión a las fuentes de origen</li>
+  <li>Paso 2 — Ingesta de datos en línea (APIs)</li>
+  <li>Paso 3 — Limpieza, transformación y carga (ETL Streaming)</li>
+  <li>Paso 4 — Reportes y Dashboard interactivo</li>
+  <li>Checklist de controles obligatorios</li>
+  <li>Conclusiones y próximos pasos</li>
+  <li>Anexos — Código fuente completo</li>
+</ol>
+
+<!-- ====================== INTRODUCCIÓN ====================== -->
+<div class="pagebreak"></div>
+<h2>1. Introducción</h2>
+<p>
+El presente informe documenta la construcción de una arquitectura de <strong>Big Data en
+tiempo real</strong> para el monitoreo de la congestión del transporte público de Santiago
+(buses de la Red Metropolitana de Movilidad). El objetivo de negocio es responder preguntas
+sobre la <strong>disponibilidad y fluidez del servicio</strong>: ¿en qué rutas y horarios los
+buses circulan congestionados?, ¿cuántos buses están activos por ruta?, ¿cómo afecta el clima
+a la velocidad de circulación?
+</p>
+<p>
+A diferencia de la etapa batch (Parcial 2), que procesaba archivos históricos, esta etapa
+incorpora <strong>ingesta en línea (streaming / real-time)</strong>: una API desplegada en la
+nube recibe los <em>pings</em> GPS de los buses a medida que ocurren, los limpia y transforma
+en el instante, y los almacena en un Data Warehouse desde donde un panel interactivo se
+actualiza automáticamente. La solución completa se implementó sobre <strong>Google Cloud
+Platform</strong> usando Cloud Run, Cloud Storage, BigQuery y Looker Studio.
+</p>
+<table>
+  <tr><th>Componente</th><th>Tecnología GCP</th><th>Rol en el pipeline</th></tr>
+  <tr><td>Ingesta en línea</td><td>Cloud Run (API Flask)</td><td>Recibe pings GPS vía HTTP en tiempo real</td></tr>
+  <tr><td>Data Lake</td><td>Cloud Storage</td><td>Almacena los eventos crudos en NDJSON</td></tr>
+  <tr><td>Data Warehouse</td><td>BigQuery</td><td>Tablas y vistas analíticas (streaming insert)</td></tr>
+  <tr><td>Panel de control</td><td>Looker Studio</td><td>Dashboard interactivo con auto-refresh</td></tr>
+</table>
+
+<!-- ====================== ARQUITECTURA ====================== -->
+<h2>2. Arquitectura general de la solución</h2>
+<p>El flujo de datos de extremo a extremo es el siguiente:</p>
+<pre class="light">  Buses (productor de eventos GPS)
+            │   POST /api/posicion  (HTTP, en vivo)
+            ▼
+  ┌───────────────────────────────────────────────┐
+  │   API de Ingesta — Cloud Run (api_red.py)      │
+  │   1) Normaliza  2) Valida+Limpia+Deduplica     │
+  │   3) Enriquece                                 │
+  └───────────────┬───────────────┬───────────────┘
+                  │               │
+                  ▼               ▼
+   Cloud Storage (Data Lake)   BigQuery (Warehouse)
+   streaming/posiciones/*.json  red_santiago.posiciones_stream
+                                        │
+                                        ▼ (4) Agregación (vista SQL)
+                                analytics_congestion_stream
+                                        │
+                                        ▼
+                                Looker Studio (Dashboard)</pre>
+<p>
+Cada posición que llega es escrita en <strong>dos destinos simultáneamente</strong>: el Data
+Lake (archivo NDJSON crudo, para trazabilidad y reproceso) y el Data Warehouse (fila lista para
+consulta). Esto garantiza el <strong>ciclo de vida del dato</strong>: crudo → limpio →
+agregado → consumo.
+</p>
+<table>
+  <tr><th>Parámetro</th><th>Valor del despliegue</th></tr>
+  <tr><td>Proyecto GCP</td><td>qwiklabs-gcp-04-bef2d4403f53</td></tr>
+  <tr><td>Región</td><td>us-west1 (Oregon)</td></tr>
+  <tr><td>Bucket (Data Lake)</td><td>gs://buses_red_2026</td></tr>
+  <tr><td>Dataset BigQuery</td><td>red_santiago</td></tr>
+  <tr><td>Servicio Cloud Run</td><td>red-gps-api</td></tr>
+  <tr><td>URL pública de la API</td><td>https://red-gps-api-809939043386.us-west1.run.app</td></tr>
+</table>
+
+<!-- ====================== PASO 1 ====================== -->
+<div class="pagebreak"></div>
+<h2>3. Paso 1 — Conexión a las fuentes de origen</h2>
+<h4>Origen de los datos</h4>
+<p>
+La fuente de origen es la <strong>flota de buses</strong>, que actúa como productor de eventos.
+Cada bus reporta su posición (identificador, ruta, velocidad y coordenadas GPS). Para la
+demostración, el productor se <strong>simula</strong> mediante un generador que emite pings con
+las mismas características que la flota real (rutas 210, 210E, 502, 502C, 104; velocidades de
+0 a 70 km/h; coordenadas dentro del <em>bounding box</em> de Santiago). El reemplazo por la API
+real de la flota (GTFS-Realtime) solo requeriría cambiar la función generadora; el resto del
+pipeline permanece idéntico.
+</p>
+<h4>Cadena de conexión y credenciales (sin exponer contraseñas)</h4>
+<p>
+La conexión a GCP <strong>no usa contraseñas</strong>: emplea <em>Application Default
+Credentials</em>, es decir, la identidad de la cuenta de servicio asignada al servicio de Cloud
+Run. Los parámetros de conexión se inyectan como variables de entorno en el despliegue:
+</p>
+<pre>gcloud run deploy red-gps-api \
+  --set-env-vars "GCP_PROJECT=$PROJECT_ID,BQ_DATASET=red_santiago,GCS_BUCKET=buses_red_2026,..."</pre>
+<p>Dentro del código, los clientes se construyen con esos valores (clientes perezosos):</p>
+<pre>def bq():
+    if _bq_client is None and _GCP_OK and PROJECT_ID:
+        _bq_client = bigquery.Client(project=PROJECT_ID)   # autenticación por ADC
+    return _bq_client</pre>
+<h4>Controles aplicados en este paso</h4>
+<table>
+  <tr><th>Control</th><th>Implementación</th></tr>
+  <tr><td>Control de errores</td><td>Si las librerías GCP o el <code>PROJECT_ID</code> no están disponibles, la API arranca igual en modo memoria y no se cae (<code>try/except ImportError</code>).</td></tr>
+  <tr><td>Validación</td><td>Se verifica que exista proyecto y dataset antes de intentar conectar.</td></tr>
+  <tr><td>Registro de actividad</td><td>El endpoint raíz <code>/</code> expone proyecto, dataset y bucket conectados para verificar la conexión.</td></tr>
+</table>
+
+<!-- ====================== PASO 2 ====================== -->
+<h2>4. Paso 2 — Ingesta de datos en línea (APIs)</h2>
+<p>
+La ingesta se realiza mediante una <strong>API propia construida con Flask y desplegada en
+Cloud Run</strong>, que expone endpoints HTTP para recibir los datos en línea. Esto cumple el
+requisito de usar APIs de la industria/propias para ingesta en tiempo real.
+</p>
+<table>
+  <tr><th>Endpoint</th><th>Método</th><th>Función</th></tr>
+  <tr><td><code>/api/posicion</code></td><td>POST</td><td>Ingesta un ping GPS individual</td></tr>
+  <tr><td><code>/api/auto/start</code></td><td>POST</td><td>Activa el generador continuo de eventos</td></tr>
+  <tr><td><code>/api/auto/stop</code></td><td>POST</td><td>Detiene el generador</td></tr>
+  <tr><td><code>/api/congestion/resumen</code></td><td>GET</td><td>Consulta agregada en vivo desde BigQuery</td></tr>
+  <tr><td><code>/api/metricas</code></td><td>GET</td><td>Contadores de ingesta (recibidos/aceptados/rechazados)</td></tr>
+</table>
+<p>
+La imagen del servicio se construye con <strong>Cloud Build</strong> a partir del
+<code>Dockerfile</code> y se publica con <code>gcloud run deploy</code>. Cada ping aceptado se
+persiste en el Data Lake (Cloud Storage, NDJSON) y en BigQuery (<em>streaming insert</em> con
+<code>insert_rows_json</code>).
+</p>
+<h4>Evidencia — ingesta de un ping real (respuesta de la API)</h4>
+<pre>POST /api/posicion  {"bus_id":"BUS_1040","ruta":"502c","velocidad_kmh":12,"latitud":-33.45,"longitud":-70.66}
+
+{"status":"aceptado","registro":{
+   "bus_id":"BUS_1040","ruta":"502C","ruta_raw":"502c","velocidad_kmh":12.0,
+   "hora":3,"dia_semana":"Saturday","nivel_congestion":"Congestionado",
+   "clima_condicion":"Despejado","clima_temperatura":14.0,
+   "viaje_id":"cd904fbe-22ce-44fc-8d56-868cf516255f"}}</pre>
+<h4>Controles aplicados en este paso</h4>
+<table>
+  <tr><th>Control</th><th>Implementación</th></tr>
+  <tr><td>Control de errores</td><td>La escritura a GCS y BigQuery va en <code>try/except</code>: si un destino falla, se registra un <em>warning</em> y la API sigue operando sin perder el evento en el otro destino.</td></tr>
+  <tr><td>Registro de actividad</td><td>Cada acción se escribe en la tabla de logs <code>red_santiago.api_log</code> (start/stop, rechazos, duplicados).</td></tr>
+  <tr><td>Validación</td><td>El endpoint exige JSON con campos obligatorios; los inválidos retornan HTTP 422.</td></tr>
+</table>
+
+<!-- ====================== PASO 3 ====================== -->
+<div class="pagebreak"></div>
+<h2>5. Paso 3 — Limpieza, transformación y carga (ETL Streaming)</h2>
+<p>
+Todo el ETL se ejecuta <strong>en línea, evento por evento</strong>, antes de almacenar. El
+proceso implementa explícitamente los seis tratamientos exigidos por la rúbrica:
+</p>
+<table>
+  <tr><th>Tratamiento</th><th>Dónde</th><th>Qué hace</th></tr>
+  <tr><td><strong>Normalización</strong></td><td><code>normalizar()</code></td><td>Ruta a forma canónica (<code>502c → 502C</code>), <code>bus_id</code> en mayúsculas, velocidad redondeada.</td></tr>
+  <tr><td><strong>Validación</strong></td><td><code>validar()</code></td><td>Velocidad en rango 0–120 km/h; coordenadas dentro de Santiago. Fuera de rango ⇒ rechazo HTTP 422.</td></tr>
+  <tr><td><strong>Limpieza</strong></td><td><code>validar()</code></td><td>Descarta registros corruptos o incompletos antes de persistir.</td></tr>
+  <tr><td><strong>Deduplicación</strong></td><td><code>es_duplicado()</code></td><td>Un mismo bus no puede registrar dos pings en el mismo minuto (clave <code>bus_id|minuto</code>).</td></tr>
+  <tr><td><strong>Enriquecimiento</strong></td><td><code>enriquecer()</code></td><td>Agrega <code>hora</code>, <code>dia_semana</code>, <code>nivel_congestion</code> y datos de clima.</td></tr>
+  <tr><td><strong>Agregación</strong></td><td>Vista SQL</td><td><code>analytics_congestion_stream</code> agrupa por ruta, hora y nivel de congestión.</td></tr>
+</table>
+<h4>Trazabilidad y ciclo de vida del dato</h4>
+<p>
+Cada registro recibe un identificador único <code>viaje_id</code> (UUID) y un
+<code>ingest_timestamp</code>, lo que permite rastrear cualquier fila desde su origen hasta el
+dashboard. Se conserva además el campo <code>ruta_raw</code> (valor original recibido) junto a
+la <code>ruta</code> normalizada, evidenciando la transformación aplicada. El dato transita por
+las capas <em>raw (GCS) → posiciones_stream (limpio) → analytics_congestion_stream (agregado)</em>.
+</p>
+<h4>Evidencia — control de errores y de duplicidad en vivo</h4>
+<pre>// Validación: velocidad fuera de rango → rechazado
+POST {"bus_id":"BUS_999","ruta":"104","velocidad_kmh":999,...}
+{"status":"rechazado","motivo":"velocidad fuera de rango (999.0)"}
+
+// Deduplicación: segundo ping del mismo bus/minuto → rechazado
+POST {"bus_id":"BUS_2020","ruta":"210",...}   → {"status":"aceptado",...}
+POST {"bus_id":"BUS_2020","ruta":"210",...}   → {"status":"rechazado","motivo":"duplicado (mismo bus, mismo minuto)"}</pre>
+<h4>Decisión sobre duplicados (política)</h4>
+<p>
+Ante un dato que ya existe, la política adoptada es <strong>SKIP (descartar)</strong>: el evento
+duplicado se rechaza y se registra en el log, en lugar de hacer <em>upsert</em>. Se eligió SKIP
+porque en telemetría GPS un segundo reporte idéntico en el mismo minuto es ruido, no una
+actualización de estado; conservarlo distorsionaría los promedios de velocidad y los conteos.
+</p>
+
+<!-- ====================== PASO 4 ====================== -->
+<h2>6. Paso 4 — Reportes y Dashboard interactivo</h2>
+<p>
+El panel se construyó en <strong>Looker Studio</strong> conectado a las vistas de BigQuery, con
+<strong>auto-refresh</strong> para reflejar el streaming. Responde directamente a las preguntas
+de negocio sobre disponibilidad y congestión del servicio.
+</p>
+<table>
+  <tr><th>Gráfico</th><th>Pregunta de negocio que responde</th><th>Dimensión / Métrica</th></tr>
+  <tr><td>Barras apiladas</td><td>¿Qué rutas están más congestionadas?</td><td>ruta × nivel_congestion / total_pings</td></tr>
+  <tr><td>Línea temporal</td><td>¿En qué horarios baja la velocidad?</td><td>hora / velocidad_promedio</td></tr>
+  <tr><td>Barras</td><td>¿Cómo se distribuye la congestión?</td><td>nivel_congestion / total_pings</td></tr>
+  <tr><td>Mapa geográfico</td><td>¿Dónde están los buses ahora?</td><td>latitud, longitud / velocidad</td></tr>
+  <tr><td>Tabla</td><td>¿Cómo impacta el clima en la circulación?</td><td>clima_condicion / velocidad_promedio</td></tr>
+  <tr><td>Scorecards</td><td>KPIs globales en vivo</td><td>total_pings, buses_unicos, vel. prom.</td></tr>
+</table>
+<div class="ph"><strong>⚠ Pendiente:</strong> reemplazar los recuadros siguientes por las capturas reales del dashboard antes de exportar el PDF.</div>
+<div class="imgph">[ Captura 1 — Vista general del dashboard con scorecards y filtros ]</div>
+<div class="imgph">[ Captura 2 — Barras apiladas de congestión por ruta + línea de velocidad por hora ]</div>
+
+<!-- ====================== CHECKLIST ====================== -->
+<div class="pagebreak"></div>
+<h2>7. Checklist de controles obligatorios</h2>
+<table>
+  <tr><th>Pregunta de control</th><th>Respuesta de nuestra solución</th></tr>
+  <tr>
+    <td><strong>¿Qué pasa si falla la conexión?</strong> (Control de errores)</td>
+    <td>Cada escritura (GCS / BigQuery) está envuelta en <code>try/except</code>. Si un destino falla, se registra un <em>warning</em> y el evento se conserva en el otro destino; la API nunca se cae. Si faltan credenciales, opera en modo memoria.</td>
+  </tr>
+  <tr>
+    <td><strong>¿Qué pasa si la API trae datos ya guardados?</strong> (Control de duplicidad)</td>
+    <td>Política <strong>SKIP</strong>: se deduplica por clave <code>bus_id|minuto</code>. El duplicado se rechaza con HTTP 422 y se registra en <code>api_log</code>. La vista <code>v_dq_duplicados</code> permite auditar duplicados residuales.</td>
+  </tr>
+  <tr>
+    <td><strong>¿Dónde se guardan los logs?</strong> (Registro de actividad)</td>
+    <td>En la tabla <code>red_santiago.api_log</code> (event_id, tipo, descripción, estado, timestamp) y en los logs nativos de Cloud Run (Cloud Logging). El endpoint <code>/api/metricas</code> expone contadores en vivo.</td>
+  </tr>
+  <tr>
+    <td><strong>¿Cómo sabemos que los datos transformados están correctos?</strong> (Validación)</td>
+    <td>Validación de rangos en línea (velocidad y coordenadas) + tres vistas de calidad en BigQuery: <code>v_dq_duplicados</code>, <code>v_dq_velocidad_anomala</code> y <code>v_dq_fuera_santiago</code>, que deben retornar 0 filas.</td>
+  </tr>
+</table>
+
+<!-- ====================== CONCLUSIONES ====================== -->
+<h2>8. Conclusiones y próximos pasos</h2>
+<p>
+La arquitectura implementada demuestra un pipeline de <strong>ingesta en línea de extremo a
+extremo</strong>: los datos se reciben, limpian, transforman y almacenan en tiempo real, y se
+sintetizan en un panel que un gerente puede usar para decidir refuerzos de flota por ruta y
+horario. Se cubrieron los seis tratamientos de datos exigidos y los cuatro controles
+obligatorios, con evidencia funcional verificada en GCP.
+</p>
+<p><strong>Próximos pasos:</strong> (1) conectar la API real de la flota (GTFS-Realtime)
+reemplazando solo el generador; (2) particionar <code>posiciones_stream</code> por fecha para
+optimizar costos; (3) agregar alertas automáticas cuando una ruta supere un umbral de
+congestión sostenido.</p>
+
+<!-- ====================== ANEXOS ====================== -->
+<div class="pagebreak"></div>
+<h2>9. Anexos — Código fuente completo</h2>
+
+<h3>Anexo A — api_red.py (API de ingesta en streaming, Cloud Run)</h3>
+<pre id="anexo-api">&quot;&quot;&quot;
+=============================================================================
+RED Santiago Big Data — API de Ingesta en Streaming (Cloud Run)
+=============================================================================
+Equivalente &quot;buses RED&quot; de la API de votación de Valorant.
+
+En vez de recibir VOTOS, esta API recibe PINGS GPS de buses EN VIVO:
+cada bus reporta su posición y velocidad en tiempo real. Por cada ping, la
+API ejecuta en línea los 4 aspectos exigidos por el IL 3.2:
+
+  1. NORMALIZACIÓN   -&gt; ruta a forma canónica (502c -&gt; 502C), bus_id, redondeo
+  2. VALIDACIÓN+LIMPIEZA+DEDUP -&gt; rangos de velocidad y coordenadas + anti-duplicado
+  3. ENRIQUECIMIENTO -&gt; hora, día de semana, nivel de congestión, clima del día
+  4. AGREGACIÓN      -&gt; vista analytics_congestion_stream (en BigQuery)
+
+Flujo de un ping:
+  POST /api/posicion
+     -&gt; validar + normalizar + enriquecer + deduplicar
+     -&gt; escribir NDJSON en GCS (Data Lake, capa streaming/)
+     -&gt; streaming insert a BigQuery (red_santiago.posiciones_stream)
+     -&gt; registrar en red_santiago.api_log
+
+Variables de entorno (se setean en `gcloud run deploy`):
+  GCP_PROJECT        ID del proyecto GCP
+  BQ_DATASET         dataset BigQuery (default: red_santiago)
+  GCS_BUCKET         bucket Data Lake (default: buses_red_2026)
+  AUTO_INTERVAL      segundos entre pings del generador automático (default: 2)
+  BUSES_POR_TICK     pings generados por ciclo del auto-generador (default: 20)
+=============================================================================
+&quot;&quot;&quot;
+
+import os
+import json
+import uuid
+import random
+import threading
+import time
+from datetime import datetime, timezone
+
+from flask import Flask, request, jsonify
+
+# --- Librerías GCP (no fallar el arranque si faltan en local) ---
+try:
+    from google.cloud import bigquery
+    from google.cloud import storage
+    _GCP_OK = True
+except ImportError:
+    _GCP_OK = False
+
+app = Flask(__name__)
+
+# =============================================================================
+# CONFIGURACIÓN
+# =============================================================================
+PROJECT_ID = os.environ.get(&quot;GCP_PROJECT&quot;, &quot;&quot;)
+BQ_DATASET = os.environ.get(&quot;BQ_DATASET&quot;, &quot;red_santiago&quot;)
+GCS_BUCKET = os.environ.get(&quot;GCS_BUCKET&quot;, &quot;buses_red_2026&quot;)
+AUTO_INTERVAL = int(os.environ.get(&quot;AUTO_INTERVAL&quot;, &quot;2&quot;))
+BUSES_POR_TICK = int(os.environ.get(&quot;BUSES_POR_TICK&quot;, &quot;20&quot;))
+
+TABLE_STREAM = f&quot;{PROJECT_ID}.{BQ_DATASET}.posiciones_stream&quot;
+TABLE_LOG = f&quot;{PROJECT_ID}.{BQ_DATASET}.api_log&quot;
+
+# --- Reglas de validación (idénticas al batch: config.py) ---
+VELOCIDAD_MIN, VELOCIDAD_MAX = 0, 120
+LATITUD_MIN, LATITUD_MAX = -33.65, -33.30
+LONGITUD_MIN, LONGITUD_MAX = -70.85, -70.50
+
+# --- Normalización de rutas (mismo mapeo que el batch) ---
+RUTAS_CANONICAS = {
+    &quot;210&quot;: &quot;210&quot;, &quot;210E&quot;: &quot;210E&quot;,
+    &quot;502&quot;: &quot;502&quot;, &quot;502C&quot;: &quot;502C&quot;,
+    &quot;104&quot;: &quot;104&quot;,
+}
+
+# --- Catálogo de rutas/buses para el generador automático ---
+RUTAS_DEMO = [&quot;210&quot;, &quot;210e&quot;, &quot;502&quot;, &quot;502c&quot;, &quot;104&quot;]   # case &quot;sucio&quot; a propósito
+BUSES_DEMO = [f&quot;BUS_{1000 + i}&quot; for i in range(1, 51)]
+
+# --- Clientes GCP (perezosos) ---
+_bq_client = None
+_gcs_bucket = None
+
+# --- Estado en memoria (fallback + métricas para los endpoints GET) ---
+_lock = threading.Lock()
+_vistos = set()                 # claves de deduplicación (bus_id|minuto)
+_metricas = {
+    &quot;recibidos&quot;: 0,
+    &quot;aceptados&quot;: 0,
+    &quot;rechazados_validacion&quot;: 0,
+    &quot;rechazados_duplicado&quot;: 0,
+}
+_recientes = []                 # últimas posiciones aceptadas (máx 200)
+_auto_on = False
+
+# --- Clima de referencia (semilla local; en prod vendría de clima_raw) ---
+_CLIMA_DEMO = {&quot;condicion&quot;: &quot;Despejado&quot;, &quot;temperatura_promedio&quot;: 14.0}
+
+
+def bq():
+    global _bq_client
+    if _bq_client is None and _GCP_OK and PROJECT_ID:
+        _bq_client = bigquery.Client(project=PROJECT_ID)
+    return _bq_client
+
+
+def gcs():
+    global _gcs_bucket
+    if _gcs_bucket is None and _GCP_OK and PROJECT_ID:
+        _gcs_bucket = storage.Client(project=PROJECT_ID).bucket(GCS_BUCKET)
+    return _gcs_bucket
+
+
+# =============================================================================
+# REGISTRO DE ACTIVIDAD (control de ejecución / trazabilidad)
+# =============================================================================
+def log_evento(event_type, description, status=&quot;OK&quot;):
+    fila = {
+        &quot;event_id&quot;: str(uuid.uuid4()),
+        &quot;event_type&quot;: event_type,
+        &quot;description&quot;: description,
+        &quot;status&quot;: status,
+        &quot;created_at&quot;: datetime.now(timezone.utc).isoformat(),
+    }
+    client = bq()
+    if client:
+        try:
+            client.insert_rows_json(TABLE_LOG, [fila])
+        except Exception as e:
+            print(f&quot;[WARN] no se pudo registrar en api_log: {e}&quot;)
+
+
+# =============================================================================
+# TRANSFORMACIÓN EN LÍNEA (los 4 aspectos del IL 3.2)
+# =============================================================================
+def normalizar(ping):
+    &quot;&quot;&quot;Aspecto 1: Normalización. Devuelve dict normalizado o lanza ValueError.&quot;&quot;&quot;
+    bus_id = str(ping.get(&quot;bus_id&quot;, &quot;&quot;)).strip().upper()
+    ruta_raw = str(ping.get(&quot;ruta&quot;, &quot;&quot;)).strip()
+    ruta = RUTAS_CANONICAS.get(ruta_raw.upper(), ruta_raw.upper())
+
+    if not bus_id or not ruta_raw:
+        raise ValueError(&quot;bus_id y ruta son obligatorios&quot;)
+
+    try:
+        velocidad = round(float(ping[&quot;velocidad_kmh&quot;]), 1)
+        lat = float(ping[&quot;latitud&quot;])
+        lon = float(ping[&quot;longitud&quot;])
+    except (KeyError, TypeError, ValueError):
+        raise ValueError(&quot;velocidad_kmh, latitud y longitud deben ser numéricos&quot;)
+
+    return {
+        &quot;bus_id&quot;: bus_id,
+        &quot;ruta&quot;: ruta,
+        &quot;ruta_raw&quot;: ruta_raw,
+        &quot;velocidad_kmh&quot;: velocidad,
+        &quot;latitud&quot;: lat,
+        &quot;longitud&quot;: lon,
+    }
+
+
+def validar(d):
+    &quot;&quot;&quot;Aspecto 2a: Validación + limpieza. Lanza ValueError si está fuera de rango.&quot;&quot;&quot;
+    if not (VELOCIDAD_MIN &lt;= d[&quot;velocidad_kmh&quot;] &lt;= VELOCIDAD_MAX):
+        raise ValueError(f&quot;velocidad fuera de rango ({d[&#x27;velocidad_kmh&#x27;]})&quot;)
+    if not (LATITUD_MIN &lt;= d[&quot;latitud&quot;] &lt;= LATITUD_MAX):
+        raise ValueError(f&quot;latitud fuera de Santiago ({d[&#x27;latitud&#x27;]})&quot;)
+    if not (LONGITUD_MIN &lt;= d[&quot;longitud&quot;] &lt;= LONGITUD_MAX):
+        raise ValueError(f&quot;longitud fuera de Santiago ({d[&#x27;longitud&#x27;]})&quot;)
+
+
+def es_duplicado(d, ts):
+    &quot;&quot;&quot;Aspecto 2b: Deduplicación. Un bus no puede tener 2 pings en el mismo minuto.&quot;&quot;&quot;
+    clave = f&quot;{d[&#x27;bus_id&#x27;]}|{ts[:16]}&quot;   # YYYY-MM-DDTHH:MM
+    with _lock:
+        if clave in _vistos:
+            return True
+        _vistos.add(clave)
+        if len(_vistos) &gt; 50000:          # acotar memoria
+            _vistos.clear()
+    return False
+
+
+def enriquecer(d, ts):
+    &quot;&quot;&quot;Aspecto 3: Enriquecimiento. Agrega hora, día, congestión y clima.&quot;&quot;&quot;
+    dt = datetime.fromisoformat(ts.replace(&quot;Z&quot;, &quot;+00:00&quot;))
+    if d[&quot;velocidad_kmh&quot;] &gt;= 30:
+        nivel = &quot;Fluido&quot;
+    elif d[&quot;velocidad_kmh&quot;] &gt;= 15:
+        nivel = &quot;Moderado&quot;
+    else:
+        nivel = &quot;Congestionado&quot;
+
+    dias = [&quot;Monday&quot;, &quot;Tuesday&quot;, &quot;Wednesday&quot;, &quot;Thursday&quot;,
+            &quot;Friday&quot;, &quot;Saturday&quot;, &quot;Sunday&quot;]
+    d.update({
+        &quot;hora&quot;: dt.hour,
+        &quot;dia_semana&quot;: dias[dt.weekday()],
+        &quot;nivel_congestion&quot;: nivel,
+        &quot;clima_condicion&quot;: _CLIMA_DEMO[&quot;condicion&quot;],
+        &quot;clima_temperatura&quot;: _CLIMA_DEMO[&quot;temperatura_promedio&quot;],
+        &quot;ingest_timestamp&quot;: ts,
+        &quot;viaje_id&quot;: str(uuid.uuid4()),
+    })
+    return d
+
+
+# =============================================================================
+# PERSISTENCIA: GCS (Data Lake) + BigQuery (streaming insert)
+# =============================================================================
+def escribir_gcs(registro):
+    bucket = gcs()
+    if not bucket:
+        return
+    try:
+        ts = registro[&quot;ingest_timestamp&quot;].replace(&quot;:&quot;, &quot;&quot;).replace(&quot;-&quot;, &quot;&quot;)
+        path = f&quot;streaming/posiciones/{ts[:8]}/{registro[&#x27;viaje_id&#x27;]}.json&quot;
+        bucket.blob(path).upload_from_string(
+            json.dumps(registro, ensure_ascii=False),
+            content_type=&quot;application/json&quot;,
+        )
+    except Exception as e:
+        print(f&quot;[WARN] no se pudo escribir en GCS: {e}&quot;)
+
+
+def insertar_bigquery(registro):
+    client = bq()
+    if not client:
+        return
+    try:
+        errores = client.insert_rows_json(TABLE_STREAM, [registro])
+        if errores:
+            print(f&quot;[WARN] BigQuery rechazó filas: {errores}&quot;)
+    except Exception as e:
+        print(f&quot;[WARN] no se pudo insertar en BigQuery: {e}&quot;)
+
+
+def procesar_ping(ping):
+    &quot;&quot;&quot;Orquesta los 4 aspectos + persistencia. Devuelve (ok, mensaje, registro).&quot;&quot;&quot;
+    with _lock:
+        _metricas[&quot;recibidos&quot;] += 1
+    ts = datetime.now(timezone.utc).isoformat()
+
+    # 1) Normalizar
+    try:
+        d = normalizar(ping)
+    except ValueError as e:
+        with _lock:
+            _metricas[&quot;rechazados_validacion&quot;] += 1
+        log_evento(&quot;posicion_rechazada&quot;, f&quot;normalizacion: {e}&quot;, &quot;ERROR&quot;)
+        return False, str(e), None
+
+    # 2a) Validar
+    try:
+        validar(d)
+    except ValueError as e:
+        with _lock:
+            _metricas[&quot;rechazados_validacion&quot;] += 1
+        log_evento(&quot;posicion_rechazada&quot;, f&quot;validacion: {e}&quot;, &quot;ERROR&quot;)
+        return False, str(e), None
+
+    # 2b) Deduplicar
+    if es_duplicado(d, ts):
+        with _lock:
+            _metricas[&quot;rechazados_duplicado&quot;] += 1
+        log_evento(&quot;posicion_duplicada&quot;, f&quot;{d[&#x27;bus_id&#x27;]} en {ts[:16]}&quot;, &quot;WARN&quot;)
+        return False, &quot;duplicado (mismo bus, mismo minuto)&quot;, None
+
+    # 3) Enriquecer
+    registro = enriquecer(d, ts)
+
+    # Persistir (Data Lake + Warehouse)
+    escribir_gcs(registro)
+    insertar_bigquery(registro)
+
+    with _lock:
+        _metricas[&quot;aceptados&quot;] += 1
+        _recientes.append(registro)
+        if len(_recientes) &gt; 200:
+            _recientes.pop(0)
+
+    return True, &quot;ok&quot;, registro
+
+
+# =============================================================================
+# GENERADOR AUTOMÁTICO (simula buses reportando en vivo)
+# =============================================================================
+def generar_ping_aleatorio():
+    return {
+        &quot;bus_id&quot;: random.choice(BUSES_DEMO),
+        &quot;ruta&quot;: random.choice(RUTAS_DEMO),
+        # 5% de velocidades inválidas para demostrar la validación
+        &quot;velocidad_kmh&quot;: (random.randint(0, 70)
+                          if random.random() &gt; 0.05
+                          else random.choice([-5, 999])),
+        &quot;latitud&quot;: round(random.uniform(LATITUD_MIN, LATITUD_MAX), 6),
+        &quot;longitud&quot;: round(random.uniform(LONGITUD_MIN, LONGITUD_MAX), 6),
+    }
+
+
+def _auto_loop():
+    global _auto_on
+    while _auto_on:
+        for _ in range(BUSES_POR_TICK):
+            procesar_ping(generar_ping_aleatorio())
+        time.sleep(AUTO_INTERVAL)
+
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+@app.route(&quot;/&quot;)
+def home():
+    return jsonify({
+        &quot;servicio&quot;: &quot;RED Santiago — Ingesta GPS en Streaming&quot;,
+        &quot;proyecto&quot;: PROJECT_ID or &quot;(sin GCP en local)&quot;,
+        &quot;dataset&quot;: BQ_DATASET,
+        &quot;bucket&quot;: GCS_BUCKET,
+        &quot;auto_generador&quot;: _auto_on,
+        &quot;metricas&quot;: _metricas,
+        &quot;endpoints&quot;: {
+            &quot;POST /api/posicion&quot;: &quot;ingestar un ping GPS&quot;,
+            &quot;POST /api/auto/start&quot;: &quot;iniciar generador automático&quot;,
+            &quot;POST /api/auto/stop&quot;: &quot;detener generador automático&quot;,
+            &quot;GET  /api/posiciones/recientes&quot;: &quot;últimas posiciones aceptadas&quot;,
+            &quot;GET  /api/congestion/resumen&quot;: &quot;resumen de congestión en vivo&quot;,
+            &quot;GET  /api/metricas&quot;: &quot;contadores de ingesta&quot;,
+        },
+    })
+
+
+@app.route(&quot;/api/posicion&quot;, methods=[&quot;POST&quot;])
+def api_posicion():
+    ping = request.get_json(silent=True) or {}
+    ok, msg, registro = procesar_ping(ping)
+    if ok:
+        return jsonify({&quot;status&quot;: &quot;aceptado&quot;, &quot;registro&quot;: registro}), 201
+    return jsonify({&quot;status&quot;: &quot;rechazado&quot;, &quot;motivo&quot;: msg}), 422
+
+
+@app.route(&quot;/api/auto/start&quot;, methods=[&quot;POST&quot;])
+def api_auto_start():
+    global _auto_on
+    if _auto_on:
+        return jsonify({&quot;status&quot;: &quot;ya estaba activo&quot;}), 200
+    _auto_on = True
+    threading.Thread(target=_auto_loop, daemon=True).start()
+    log_evento(&quot;auto_start&quot;, f&quot;intervalo={AUTO_INTERVAL}s buses={BUSES_POR_TICK}&quot;)
+    return jsonify({&quot;status&quot;: &quot;generador iniciado&quot;,
+                    &quot;intervalo_s&quot;: AUTO_INTERVAL,
+                    &quot;buses_por_tick&quot;: BUSES_POR_TICK}), 200
+
+
+@app.route(&quot;/api/auto/stop&quot;, methods=[&quot;POST&quot;])
+def api_auto_stop():
+    global _auto_on
+    _auto_on = False
+    log_evento(&quot;auto_stop&quot;, &quot;generador detenido&quot;)
+    return jsonify({&quot;status&quot;: &quot;generador detenido&quot;}), 200
+
+
+@app.route(&quot;/api/posiciones/recientes&quot;)
+def api_recientes():
+    with _lock:
+        return jsonify(_recientes[-50:])
+
+
+@app.route(&quot;/api/metricas&quot;)
+def api_metricas():
+    with _lock:
+        return jsonify(dict(_metricas))
+
+
+@app.route(&quot;/api/congestion/resumen&quot;)
+def api_congestion():
+    &quot;&quot;&quot;Resumen en vivo desde BigQuery; si no hay GCP, usa memoria local.&quot;&quot;&quot;
+    client = bq()
+    if client:
+        sql = f&quot;&quot;&quot;
+        SELECT ruta, nivel_congestion, COUNT(*) AS pings,
+               ROUND(AVG(velocidad_kmh), 1) AS vel_promedio
+        FROM `{TABLE_STREAM}`
+        GROUP BY ruta, nivel_congestion
+        ORDER BY ruta, nivel_congestion
+        &quot;&quot;&quot;
+        try:
+            filas = [dict(r) for r in client.query(sql).result()]
+            return jsonify({&quot;fuente&quot;: &quot;bigquery&quot;, &quot;resumen&quot;: filas})
+        except Exception as e:
+            return jsonify({&quot;fuente&quot;: &quot;error_bq&quot;, &quot;detalle&quot;: str(e)}), 200
+
+    # Fallback en memoria
+    with _lock:
+        agg = {}
+        for r in _recientes:
+            k = (r[&quot;ruta&quot;], r[&quot;nivel_congestion&quot;])
+            agg.setdefault(k, []).append(r[&quot;velocidad_kmh&quot;])
+    resumen = [
+        {&quot;ruta&quot;: k[0], &quot;nivel_congestion&quot;: k[1], &quot;pings&quot;: len(v),
+         &quot;vel_promedio&quot;: round(sum(v) / len(v), 1)}
+        for k, v in sorted(agg.items())
+    ]
+    return jsonify({&quot;fuente&quot;: &quot;memoria&quot;, &quot;resumen&quot;: resumen})
+
+
+if __name__ == &quot;__main__&quot;:
+    port = int(os.environ.get(&quot;PORT&quot;, 8080))
+    app.run(host=&quot;0.0.0.0&quot;, port=port)
+</pre>
+
+<h3>Anexo B — Dockerfile</h3>
+<pre id="anexo-docker"># =============================================================================
+# RED Santiago — Imagen de la API de ingesta GPS en streaming (Cloud Run)
+# =============================================================================
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
+
+# Instalar dependencias primero (mejor caché de capas)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar el código de la API
+COPY api_red.py .
+
+# Cloud Run inyecta la variable PORT (default 8080)
+ENV PORT=8080
+
+# Servir con gunicorn (producción), 1 worker + varios hilos para el auto-generador
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 api_red:app
+</pre>
+
+<h3>Anexo C — requirements.txt</h3>
+<pre id="anexo-req">Flask==3.0.3
+gunicorn==22.0.0
+google-cloud-bigquery==3.25.0
+google-cloud-storage==2.18.2
+</pre>
+
+<h3>Anexo D — setup_bq_red.sql (tablas y vistas en BigQuery)</h3>
+<pre id="anexo-sql">-- ============================================================================
+-- RED Santiago — Setup BigQuery para la capa STREAMING
+-- ============================================================================
+-- Crea las tablas que la API de Cloud Run necesita para el streaming insert,
+-- la tabla de log, la vista analítica (AGREGACIÓN en vivo) y las vistas de
+-- control de calidad (data quality).
+--
+-- Ejecutar con:
+--   cat setup_bq_red.sql | bq query --nouse_legacy_sql
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 1. Tabla de posiciones en streaming (destino del insert de la API)
+--    Ya viene NORMALIZADA y ENRIQUECIDA desde la API (IL 3.2).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `red_santiago.posiciones_stream` (
+  viaje_id           STRING    NOT NULL,
+  bus_id             STRING    NOT NULL,
+  ruta               STRING,        -- ruta canónica (502C)
+  ruta_raw           STRING,        -- ruta original recibida (502c)
+  velocidad_kmh      FLOAT64,
+  latitud            FLOAT64,
+  longitud           FLOAT64,
+  hora               INT64,
+  dia_semana         STRING,
+  nivel_congestion   STRING,        -- Fluido / Moderado / Congestionado
+  clima_condicion    STRING,
+  clima_temperatura  FLOAT64,
+  ingest_timestamp   TIMESTAMP
+);
+
+-- ---------------------------------------------------------------------------
+-- 2. Tabla de log de actividad de la API (trazabilidad / registro)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `red_santiago.api_log` (
+  event_id     STRING,
+  event_type   STRING,
+  description  STRING,
+  status       STRING,
+  created_at   TIMESTAMP
+);
+
+-- ---------------------------------------------------------------------------
+-- 3. Vista analítica para el dashboard (AGREGACIÓN en vivo por ruta y hora)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE VIEW `red_santiago.analytics_congestion_stream` AS
+SELECT
+  ruta,
+  hora,
+  nivel_congestion,
+  clima_condicion,
+  COUNT(*)                       AS total_pings,
+  COUNT(DISTINCT bus_id)         AS buses_unicos,
+  ROUND(AVG(velocidad_kmh), 2)   AS velocidad_promedio,
+  ROUND(MIN(velocidad_kmh), 2)   AS velocidad_min,
+  ROUND(MAX(velocidad_kmh), 2)   AS velocidad_max
+FROM `red_santiago.posiciones_stream`
+GROUP BY ruta, hora, nivel_congestion, clima_condicion;
+
+-- ---------------------------------------------------------------------------
+-- 4. Vistas de control de calidad (Data Quality)
+-- ---------------------------------------------------------------------------
+
+-- 4.1 Posibles duplicados: mismo bus, misma ruta, mismo minuto
+CREATE OR REPLACE VIEW `red_santiago.v_dq_duplicados` AS
+SELECT
+  bus_id,
+  ruta,
+  TIMESTAMP_TRUNC(ingest_timestamp, MINUTE) AS minuto,
+  COUNT(*) AS apariciones
+FROM `red_santiago.posiciones_stream`
+GROUP BY bus_id, ruta, minuto
+HAVING COUNT(*) &gt; 1;
+
+-- 4.2 Velocidades anómalas que se hubieran colado (la API ya las filtra)
+CREATE OR REPLACE VIEW `red_santiago.v_dq_velocidad_anomala` AS
+SELECT *
+FROM `red_santiago.posiciones_stream`
+WHERE velocidad_kmh &lt; 0 OR velocidad_kmh &gt; 120;
+
+-- 4.3 Coordenadas fuera del bounding box de Santiago
+CREATE OR REPLACE VIEW `red_santiago.v_dq_fuera_santiago` AS
+SELECT *
+FROM `red_santiago.posiciones_stream`
+WHERE latitud  NOT BETWEEN -33.65 AND -33.30
+   OR longitud NOT BETWEEN -70.85 AND -70.50;
+</pre>
+
+<h3>Anexo E — demo_stream_red.sh (generador de tráfico para la demo)</h3>
+<pre id="anexo-demo">#!/usr/bin/env bash
+# ============================================================================
+# RED Santiago — Demo de tráfico en streaming para la presentación/video
+# ============================================================================
+# Uso:  ./demo_stream_red.sh &quot;https://tu-api-xxxx.run.app&quot;
+#
+# Envía oleadas de pings GPS de buses con bus_id, ruta, velocidad y
+# coordenadas aleatorias dentro de Santiago. ~5% serán inválidos a propósito
+# para evidenciar la validación en vivo.
+# ============================================================================
+set -euo pipefail
+
+API_URL=&quot;${1:-}&quot;
+if [[ -z &quot;$API_URL&quot; ]]; then
+  echo &quot;Uso: $0 &lt;API_URL&gt;&quot;
+  exit 1
+fi
+
+RUTAS=(&quot;210&quot; &quot;210e&quot; &quot;502&quot; &quot;502c&quot; &quot;104&quot;)
+
+rand_lat() { awk -v s=&quot;$RANDOM&quot; &#x27;BEGIN{srand(s); printf &quot;%.6f&quot;, -33.65 + rand()*0.35}&#x27;; }
+rand_lon() { awk -v s=&quot;$RANDOM&quot; &#x27;BEGIN{srand(s); printf &quot;%.6f&quot;, -70.85 + rand()*0.35}&#x27;; }
+
+echo &quot;Enviando tráfico de buses a: $API_URL&quot;
+while true; do
+  for i in $(seq 1 30); do
+    BUS=&quot;BUS_$(( (RANDOM % 50) + 1000 ))&quot;
+    RUTA=&quot;${RUTAS[$RANDOM % ${#RUTAS[@]}]}&quot;
+    if (( RANDOM % 20 == 0 )); then
+      VEL=-5                          # ~5% inválidos
+    else
+      VEL=$(( RANDOM % 70 ))
+    fi
+    curl -s -X POST &quot;$API_URL/api/posicion&quot; \
+      -H &quot;Content-Type: application/json&quot; \
+      -d &quot;{\&quot;bus_id\&quot;:\&quot;$BUS\&quot;,\&quot;ruta\&quot;:\&quot;$RUTA\&quot;,\&quot;velocidad_kmh\&quot;:$VEL,\&quot;latitud\&quot;:$(rand_lat),\&quot;longitud\&quot;:$(rand_lon)}&quot; \
+      &gt; /dev/null
+  done
+  echo &quot;[$(date +%H:%M:%S)] 30 pings enviados ✓&quot;
+  sleep 3
+done
+</pre>
+
+<h3>Anexo F — Comandos de despliegue en GCP (Cloud Shell)</h3>
+<pre class="light"># 1. Variables
+PROJECT_ID="$(gcloud config get-value project)"
+REGION="us-west1"
+BUCKET_NAME="buses_red_2026"
+
+# 2. Habilitar servicios
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
+  bigquery.googleapis.com storage.googleapis.com
+
+# 3. Data Lake
+gcloud storage buckets create "gs://$BUCKET_NAME" --location="$REGION" \
+  --uniform-bucket-level-access
+
+# 4. Dataset + tablas/vistas streaming
+bq mk --dataset --location="$REGION" red_santiago
+cat setup_bq_red.sql | bq query --nouse_legacy_sql
+
+# 5. Build + Deploy
+gcloud builds submit --tag "gcr.io/$PROJECT_ID/red-gps-api"
+gcloud run deploy red-gps-api \
+  --image "gcr.io/$PROJECT_ID/red-gps-api" --platform managed --region "$REGION" \
+  --allow-unauthenticated \
+  --set-env-vars "GCP_PROJECT=$PROJECT_ID,BQ_DATASET=red_santiago,GCS_BUCKET=$BUCKET_NAME,AUTO_INTERVAL=2,BUSES_POR_TICK=20" \
+  --min-instances 1 --timeout 300
+
+# 6. Encender flujo continuo
+API_URL=$(gcloud run services describe red-gps-api --region "$REGION" --format="value(status.url)")
+curl -s -X POST "$API_URL/api/auto/start"</pre>
+
+<p class="small" style="margin-top:30px; text-align:center;">— Fin del informe —</p>
+
+</body>
+</html>

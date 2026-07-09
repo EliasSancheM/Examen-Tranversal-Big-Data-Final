@@ -1,0 +1,157 @@
+[
+    {
+        "fecha": "2026-05-01",
+        "condicion": "Lluvia",
+        "temperatura_promedio": null
+    },
+    {
+        "fecha": "2026-05-02",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 20.6
+    },
+    {
+        "fecha": "2026-05-03",
+        "condicion": "Despejado",
+        "temperatura_promedio": 5.8
+    },
+    {
+        "fecha": "2026-05-04",
+        "condicion": "Nublado",
+        "temperatura_promedio": 6.9
+    },
+    {
+        "fecha": "2026-05-05",
+        "condicion": "Despejado",
+        "temperatura_promedio": 23.7
+    },
+    {
+        "fecha": "2026-05-06",
+        "condicion": "Nublado",
+        "temperatura_promedio": 22.4
+    },
+    {
+        "fecha": "2026-05-07",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 12.9
+    },
+    {
+        "fecha": "2026-05-08",
+        "condicion": "Nublado",
+        "temperatura_promedio": 18.7
+    },
+    {
+        "fecha": "2026-05-09",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 7.3
+    },
+    {
+        "fecha": "2026-05-10",
+        "condicion": "Nublado",
+        "temperatura_promedio": 20.3
+    },
+    {
+        "fecha": "2026-05-11",
+        "condicion": "Despejado",
+        "temperatura_promedio": 11.4
+    },
+    {
+        "fecha": "2026-05-12",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 21.2
+    },
+    {
+        "fecha": "2026-05-13",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 18.1
+    },
+    {
+        "fecha": "2026-05-14",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 17.3
+    },
+    {
+        "fecha": "2026-05-15",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 6.6
+    },
+    {
+        "fecha": "2026-05-16",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 5.7
+    },
+    {
+        "fecha": "2026-05-17",
+        "condicion": "Despejado",
+        "temperatura_promedio": 21.4
+    },
+    {
+        "fecha": "2026-05-18",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 8.4
+    },
+    {
+        "fecha": "2026-05-19",
+        "condicion": "Nublado",
+        "temperatura_promedio": null
+    },
+    {
+        "fecha": "2026-05-20",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 10.3
+    },
+    {
+        "fecha": "2026-05-21",
+        "condicion": "Despejado",
+        "temperatura_promedio": 16.6
+    },
+    {
+        "fecha": "2026-05-22",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 10.2
+    },
+    {
+        "fecha": "2026-05-23",
+        "condicion": "Despejado",
+        "temperatura_promedio": 24.5
+    },
+    {
+        "fecha": "2026-05-24",
+        "condicion": "Nublado",
+        "temperatura_promedio": 6.9
+    },
+    {
+        "fecha": "2026-05-25",
+        "condicion": "Despejado",
+        "temperatura_promedio": null
+    },
+    {
+        "fecha": "2026-05-26",
+        "condicion": "Despejado",
+        "temperatura_promedio": 15.4
+    },
+    {
+        "fecha": "2026-05-27",
+        "condicion": "Nublado",
+        "temperatura_promedio": 24.2
+    },
+    {
+        "fecha": "2026-05-28",
+        "condicion": "Lluvia",
+        "temperatura_promedio": 13.5
+    },
+    {
+        "fecha": "2026-05-29",
+        "condicion": "Nublado",
+        "temperatura_promedio": 18.4
+    },
+    {
+        "fecha": "2026-05-30",
+        "condicion": "Nublado",
+        "temperatura_promedio": 9.4
+    },
+    {
+        "fecha": "2026-05-31",
+        "condicion": "Despejado",
+        "temperatura_promedio": null
+    }
+]

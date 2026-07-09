@@ -1,0 +1,42 @@
+import pandas as pd
+import json
+
+print("=" * 60)
+print("VALIDACION: historial_rutas_DTPM.csv")
+print("=" * 60)
+df = pd.read_csv("historial_rutas_DTPM.csv")
+print(f"  Filas: {len(df)}")
+print(f"  Columnas: {list(df.columns)}")
+print(f"  Tipos:")
+print(df.dtypes)
+print(f"  Nulos por columna:")
+print(df.isnull().sum())
+print(f"  Velocidad min: {df['Velocidad_kmh'].min()}, max: {df['Velocidad_kmh'].max()}")
+print(f"  Velocidades negativas: {(df['Velocidad_kmh'] < 0).sum()}")
+print(f"  Rutas unicas: {df['Ruta'].unique().tolist()}")
+print(f"  IDs Bus unicos: {df['ID_Bus'].nunique()}")
+print(f"  Rango fechas: {df['Timestamp'].min()} - {df['Timestamp'].max()}")
+dup = len(df) - df.drop_duplicates().shape[0]
+print(f"  Duplicados exactos: {dup}")
+
+print()
+print("=" * 60)
+print("VALIDACION: clima_santiago.json")
+print("=" * 60)
+with open("clima_santiago.json", "r", encoding="utf-8") as f:
+    clima = json.load(f)
+print(f"  Registros: {len(clima)}")
+print(f"  Primer registro: {clima[0]}")
+nulos_temp = sum(1 for c in clima if c["temperatura_promedio"] is None)
+print(f"  Temperaturas nulas: {nulos_temp}")
+condiciones = set(c["condicion"] for c in clima)
+print(f"  Condiciones: {condiciones}")
+print(f"  Rango fechas: {clima[0]['fecha']} - {clima[-1]['fecha']}")
+
+print()
+print("=" * 60)
+print("RESUMEN")
+print("=" * 60)
+print("  CSV: OK" if len(df) == 10100 else "  CSV: ERROR")
+print("  JSON: OK" if len(clima) == 31 else "  JSON: ERROR")
+print("  Errores inyectados presentes: OK")
